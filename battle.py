@@ -189,14 +189,14 @@ def simulate_round(player1, player2):
 
     # Подготовка оружия (не активация!)
     if a == 11:
+        # Проверяем: можно ли использовать кунай И не активен ли сюрикен
         if (player1.can_use_weapon.get("кунай", False) and
-                player1.inventory.get("кунай", 0) > 0):
+                player1.inventory.get("кунай", 0) > 0 and
+                player1.active_weapon != "сюрикен"):
             player1.prepared_kunai = True
             print(f"{player1.name} подготовил кунай!")
-            desired = "кунай" if player1.active_weapon == "сюрикен" else "сюрикен"
-            player1.switch_weapon(desired)
         else:
-            print(f"{player1.name} не может подготовить кунай (нет в инвентаре/запрещено).")
+            print(f"{player1.name} не может подготовить кунай (нет в инвентаре или уже использует сюрикен).")
             # Заменяем на случайное действие из допустимого диапазона
             a = random.randint(1, 10)
             print(f"{player1.name} вынужден выбрать другое действие: {a}")
@@ -204,11 +204,11 @@ def simulate_round(player1, player2):
         # --- ПРОВЕРКА ДЕЙСТВИЯ 11 ДЛЯ НИНДЗЯ ---
     if b == 11:
         if (player2.can_use_weapon.get("кунай", False) and
-                player2.inventory.get("кунай", 0) > 0):
+                player2.inventory.get("кунай", 0) > 0 and
+                player2.active_weapon != "сюрикен"):
             player2.prepared_kunai = True
             print(f"{player2.name} подготовил кунай!")
-            desired = "кунай" if player2.active_weapon == "сюрикен" else "сюрикен"
-            player2.switch_weapon(desired)
+
         else:
             print(f"{player2.name} не может подготовить кунай (нет в инвентаре/запрещено).")
             # Заменяем на случайное действие из допустимого диапазона
@@ -217,7 +217,8 @@ def simulate_round(player1, player2):
 
     if a == 12:
         if (player1.can_use_weapon.get("сюрикен", False) and
-                player1.inventory.get("сюрикен", 0) > 0):
+                player1.inventory.get("сюрикен", 0) > 0 and
+                player1.active_weapon != "кунай"):
             player1.prepared_shuriken = True
             print(f"{player1.name} подготовил сюрикен!")
         else:
@@ -229,7 +230,8 @@ def simulate_round(player1, player2):
         # --- ПРОВЕРКА ДЕЙСТВИЯ 11 ДЛЯ НИНДЗЯ ---
     if b == 12:
         if (player2.can_use_weapon.get("сюрикен", False) and
-                player2.inventory.get("сюрикен", 0) > 0):
+                player2.inventory.get("сюрикен", 0) > 0 and
+                player2.active_weapon != "кунай"):
             player2.prepared_shuriken = True
             print(f"{player2.name} подготовил сюрикен!")
         else:
@@ -350,5 +352,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
