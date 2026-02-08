@@ -2,6 +2,81 @@ import random
 from damage_table import DAMAGE_TABLE
 from damage_table_weapon import WEARON_P1_ATTACKS, WEARON_P2_ATTACKS, WEARON_EFFECTS_DUAL_KUNAI
 from damage_table_suriken import SHURIKEN_P1_ATTACKS, SHURIKEN_P2_ATTACKS, SHURIKEN_DUAL_ATTACKS
+from mixed_table import SHURIKEN_P1_KUNAI_P2_ATTACKS, SHURIKEN_P2_KUNAI_P1_ATTACKS
+
+
+
+CHARACTERS = [
+    "Наруто Удзумаки",
+    "Саскэ Утиха",
+    "Сакура Харуно",
+    "Какаси Хатакэ",
+    "Дзирайя",
+    "Цунадэ",
+    "Орочимару",
+    "Итати Утиха",
+    "Кисамэ Хосигаки",
+    "Хидан",
+    "Какудзу",
+    "Дейдара",
+    "Сасори",
+    "Конан",
+    "Пэйн (Нагато)",
+    "Киллер Би",
+    "Гаара",
+    "Канкуро",
+    "Тэмари",
+    "Рок Ли",
+    "Майто Гай",
+    "Нэдзи Хюга",
+    "Хината Хюга",
+    "Сино Абурамэ",
+    "Киба Инудзука",
+    "Акамару",
+    "Тёдзи Акимити",
+    "Ино Яманака",
+    "Сикамару Нара",
+    "Асума Сарутоби",
+    "Курэнай Юхи",
+    "Ирука Умино",
+    "Анко Митараси",
+    "Ибики Морино",
+    "Мифунэ",
+    "Тиё",
+    "Сасори (в детстве)",
+    "Эй (Райкагэ)",
+    "Мэй Тэруми",
+    "Ооноки",
+    "Цучикагэ",
+    "Данзо Симура",
+    "Конохамару Сарутоби",
+    "Моэги",
+    "Удон",
+    "Сидзунэ",
+    "Торифу Абураме",
+    "Сино Абурамэ (отец)",
+    "Курэнай (в юности)",
+    "Аоба Ямасиро",
+    "Гэнма Сирануи",
+    "Райдо Намиаси",
+    "Каси",
+    "Хана Инудзука",
+    "Тэн‑Тэн",
+    "Хаку",
+    "Дзабудза Момоти",
+    "Югито Нии",
+    "Роси",
+    "Хан",
+    "Фу",
+    "Утаката",
+    "Чоудзи Акимити (младший, из следующего поколения)"
+]
+#CHARACTERS = [f"Персонаж_{i}" for i in range(1, 64)]
+alive_fighters = []
+new_alive = random.sample(CHARACTERS, 31)
+def select_fighters():
+    fighters = random.sample(CHARACTERS, 2)
+    return fighters[0], fighters[1]
 
 class Player:
     def __init__(self, name):
@@ -15,6 +90,19 @@ class Player:
             "кунай": True,
             "сюрикен": True
         }
+        self.learned_techniques = []
+
+    def switch_weapon(self, new_weapon):
+        """Переключает активное оружие, если оно доступно."""
+        if (new_weapon in self.inventory
+                and self.inventory[new_weapon] > 0
+                and self.can_use_weapon[new_weapon]):
+            self.active_weapon = new_weapon
+            print(f"{self.name} переключился на {new_weapon}.")
+            return True
+        else:
+            print(f"{self.name} не может переключиться на {new_weapon} (нет в инвентаре/сломано).")
+            return False
 
     def get_weapon_status(self):
         return self.active_weapon if self.active_weapon else "нет оружия"
@@ -34,6 +122,10 @@ def get_damage(a, b, weapon_p1, weapon_p2):
         table = SHURIKEN_P2_ATTACKS
     elif weapon_p1 == "сюрикен" and weapon_p2 == "сюрикен":
         table =  SHURIKEN_DUAL_ATTACKS
+    elif weapon_p1 == "кунай" and weapon_p2 == "сюрикен":
+        table = SHURIKEN_P2_KUNAI_P1_ATTACKS
+    elif weapon_p1 == "сюрикен" and weapon_p2 == "кунай":
+        table = SHURIKEN_P1_KUNAI_P2_ATTACKS
     else:
         table = DAMAGE_TABLE
 
@@ -42,6 +134,34 @@ def get_damage(a, b, weapon_p1, weapon_p2):
     return result
 
 #round_counter = 0
+
+def post_battle_reward(winner, loser):
+    # Награждаем победителя
+    weapon = random.choice(["кунай", "сюрикен"])
+    winner.inventory[weapon] += 1
+    print(f"{winner.name} изучил новую технику и получил {weapon}!")
+
+    techniques_to_learn = ["Техника Подмены Тела", "Техника Клонирования"]
+    if not hasattr(winner, "learned_techniques"):
+        winner.learned_techniques = []
+
+    for technique in techniques_to_learn:
+        if technique not in winner.learned_techniques:
+            winner.learned_techniques.append(technique)
+            print(f"{winner.name} освоил технику: {technique}!")
+
+    if winner.name not in alive_fighters:
+        alive_fighters.append(winner.name)
+
+
+
+
+
+    # Выводим статистику
+    print(f"\n=== Итоги раунда ===")
+    print(f"Выжило: {len(new_alive)} из 64")
+    print("Выжившие:", ", ".join(alive_fighters),", ".join(new_alive))
+    print("Освоенные техники:", ", ".join(winner.learned_techniques))
 def simulate_round(player1, player2):
     #global round_counter  # Говорим, что используем глобальную переменную
     #round_counter += 1  # Теперь это работает: переменная существует
@@ -73,6 +193,8 @@ def simulate_round(player1, player2):
                 player1.inventory.get("кунай", 0) > 0):
             player1.prepared_kunai = True
             print(f"{player1.name} подготовил кунай!")
+            desired = "кунай" if player1.active_weapon == "сюрикен" else "сюрикен"
+            player1.switch_weapon(desired)
         else:
             print(f"{player1.name} не может подготовить кунай (нет в инвентаре/запрещено).")
             # Заменяем на случайное действие из допустимого диапазона
@@ -85,6 +207,8 @@ def simulate_round(player1, player2):
                 player2.inventory.get("кунай", 0) > 0):
             player2.prepared_kunai = True
             print(f"{player2.name} подготовил кунай!")
+            desired = "кунай" if player2.active_weapon == "сюрикен" else "сюрикен"
+            player2.switch_weapon(desired)
         else:
             print(f"{player2.name} не может подготовить кунай (нет в инвентаре/запрещено).")
             # Заменяем на случайное действие из допустимого диапазона
@@ -194,8 +318,8 @@ def simulate_round(player1, player2):
     player2.prepared_kunai = False
     player2.prepared_shuriken = False
 
-    print(f"Самурай (P1): {player1.get_weapon_status()}")
-    print(f"Ниндзя (P2): {player2.get_weapon_status()}")
+    print(f"{player1.name}: {player1.get_weapon_status()}")
+    print(f"{player2.name}: {player2.get_weapon_status()}")
 
     # Проверка HP и вывод результата раунда
     if player1.hp <= 0 and player2.hp <= 0:
@@ -203,18 +327,22 @@ def simulate_round(player1, player2):
         return True
     elif player1.hp <= 0:
         print(f"\n{player2.name} победил! {player1.name} повержен.")
+        post_battle_reward(player2, player1)
         return True
     elif player2.hp <= 0:
         print(f"\n{player1.name} победил! {player2.name} повержен.")
+        post_battle_reward(player1, player2)
         return True
 
     print(f"Урон: {player1.name}={dmg1}, {player2.name}={dmg2}")
     print(f"\nТекущее HP: {player1.name} = {player1.hp}, {player2.name} = {player2.hp}")
 
     return False
+
 def main():
-    player1 = Player("Самурай")
-    player2 = Player("Ниндзя")
+    player1_name, player2_name = select_fighters()
+    player1 = Player(player1_name)
+    player2 = Player(player2_name)
     print("Начало боя!")
     while True:
         if simulate_round(player1, player2):
@@ -222,3 +350,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
