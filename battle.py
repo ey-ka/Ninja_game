@@ -1,4 +1,5 @@
 import random
+from player import Player
 from damage_table import DAMAGE_TABLE
 from damage_table_weapon import WEARON_P1_ATTACKS, WEARON_P2_ATTACKS, WEARON_EFFECTS_DUAL_KUNAI
 from damage_table_suriken import SHURIKEN_P1_ATTACKS, SHURIKEN_P2_ATTACKS, SHURIKEN_DUAL_ATTACKS
@@ -71,41 +72,47 @@ CHARACTERS = [
     "Утаката",
     "Чоудзи Акимити (младший, из следующего поколения)"
 ]
-#CHARACTERS = [f"Персонаж_{i}" for i in range(1, 64)]
+
+
 alive_fighters = []
 new_alive = random.sample(CHARACTERS, 31)
+
+all_survivors = alive_fighters + new_alive
+SECOND_MATCH_CHARACTERS = all_survivors
+
+alive_fighters_two = []
+second_alive = random.sample(SECOND_MATCH_CHARACTERS, 15)
+
+for player_data in SECOND_MATCH_CHARACTERS:
+    learned_techniques = ["Техника Подмены Тела", "Техника Клонирования"]
+    extra_weapon = random.choice(["кунай", "сюрикен"])
+    break
 def select_fighters():
     fighters = random.sample(CHARACTERS, 2)
     return fighters[0], fighters[1]
 
-class Player:
-    def __init__(self, name):
-        self.name = name
-        self.hp = 20
-        self.inventory = {"кунай": 1, "сюрикен": 1}
-        self.active_weapon = None  # "кунай"/"сюрикен"/None — используется в бою
-        self.prepared_kunai = False  # подготовлен ли кунай (действие 11)
-        self.prepared_shuriken = False  # подготовлен ли сюрикен (действие 12)
-        self.can_use_weapon = {
-            "кунай": True,
-            "сюрикен": True
-        }
-        self.learned_techniques = []
+def setup_second_match_fighters():
+    # Выбираем победителя первой схватки
+    winner = Player(alive_fighters, is_winner=True)
 
-    def switch_weapon(self, new_weapon):
-        """Переключает активное оружие, если оно доступно."""
-        if (new_weapon in self.inventory
-                and self.inventory[new_weapon] > 0
-                and self.can_use_weapon[new_weapon]):
-            self.active_weapon = new_weapon
-            print(f"{self.name} переключился на {new_weapon}.")
-            return True
-        else:
-            print(f"{self.name} не может переключиться на {new_weapon} (нет в инвентаре/сломано).")
-            return False
+    # Случайный противник из оставшихся
+    opponent_name = random.choice([
+        name for name in SECOND_MATCH_CHARACTERS
+        if name != alive_fighters
+    ])
+    opponent = Player(opponent_name)
 
-    def get_weapon_status(self):
-        return self.active_weapon if self.active_weapon else "нет оружия"
+    # Распределяем оружие для противника: 2 куная + 1 сюрикен ИЛИ 2 сюрикена + 1 кунай
+    if random.choice([True, False]):
+        opponent.inventory["кунай"]["count"] = 2
+        opponent.inventory["сюрикен"]["count"] = 1
+    else:
+        opponent.inventory["кунай"]["count"] = 1
+        opponent.inventory["сюрикен"]["count"] = 2
+
+    return winner, opponent
+
+
 def get_damage(a, b, weapon_p1, weapon_p2):
     """Рассчитывает урон и эффект для раунда."""
     if weapon_p1 is None and weapon_p2 is None:
@@ -161,6 +168,34 @@ def post_battle_reward(winner, loser):
     print(f"\n=== Итоги раунда ===")
     print(f"Выжило: {len(new_alive)} из 64")
     print("Выжившие:", ", ".join(alive_fighters),", ".join(new_alive))
+    print("Освоенные техники:", ", ".join(winner.learned_techniques))
+
+def post_second_battle_reward(winner, loser):
+    # Награждаем победителя
+    weapon = random.choice(["кунай", "сюрикен"])
+    winner.inventory[weapon] += 1
+    print(f"{winner.name} изучил новую технику и получил {weapon}!")
+
+    techniques_to_learn = ["Техника Подмены Тела", "Техника Клонирования"]
+    if not hasattr(winner, "learned_techniques"):
+        winner.learned_techniques = []
+
+    for technique in techniques_to_learn:
+        if technique not in winner.learned_techniques:
+            winner.learned_techniques.append(technique)
+            print(f"{winner.name} освоил технику: {technique}!")
+
+    if winner.name not in alive_fighters:
+        alive_fighters.append(winner.name)
+
+
+
+
+
+    # Выводим статистику
+    print(f"\n=== Итоги раунда ===")
+    print(f"Выжило: {len(all_survivors)} из 32")
+    print("Выжившие:", ", ".join(alive_fighters_two),", ".join(second_alive))
     print("Освоенные техники:", ", ".join(winner.learned_techniques))
 def simulate_round(player1, player2):
     #global round_counter  # Говорим, что используем глобальную переменную
@@ -341,6 +376,194 @@ def simulate_round(player1, player2):
 
     return False
 
+def simulate_second_match_round(player1, player2):
+    # Сброс эффектов техник в начале раунда
+    player1.reset_technique_effect()
+    player2.reset_technique_effect()
+
+    print(f"\n=== ВТОРАЯ СХВАТКА ===")
+    print(f"Бойцы: {player1.name} vs {player2.name}")
+    print("Нажмите Enter, чтобы начать раунд...")
+    input()
+    print("Вы нажали Enter — начинаем раунд!")
+
+    a = random.randint(1, 12)
+    b = random.randint(1, 12)
+
+    print(f"{player1.name} выбрал действие: {a}")
+    print(f"{player2.name} выбрал действие: {b}")
+
+    # Обработка действий 11 (подготовка оружия)
+    if a == 11:
+        weapon = random.choice(["кунай", "сюрикен"])
+        if (weapon in player1.inventory and
+                player1.inventory[weapon] > 0 and
+                player1.can_use_weapon[weapon]):
+            player1.active_weapon = weapon
+            if weapon == "кунай":
+                player1.prepared_kunai = True
+            else:
+                player1.prepared_shuriken = True
+            print(f"{player1.name} подготовил {weapon}!")
+        else:
+            print(f"{player1.name} не может подготовить {weapon} (нет в инвентаре/запрещено).")
+            a = random.randint(1, 10)
+            print(f"{player1.name} вынужден выбрать другое действие: {a}")
+
+    if b == 11:
+        weapon = random.choice(["кунай", "сюрикен"])
+        if (weapon in player2.inventory and
+                player2.inventory[weapon] > 0 and
+                player2.can_use_weapon[weapon]):
+            player2.active_weapon = weapon
+            if weapon == "кунай":
+                player2.prepared_kunai = True
+            else:
+                player2.prepared_shuriken = True
+            print(f"{player2.name} подготовил {weapon}!")
+        else:
+            print(f"{player2.name} не может подготовить {weapon} (нет в инвентаре/запрещено).")
+            b = random.randint(1, 10)
+            print(f"{player2.name} вынужден выбрать другое действие: {b}")
+
+    # Обработка действий 12 (использование техники)
+    technique_used_p1 = False
+    technique_used_p2 = False
+
+    if a == 12:
+        dmg_mod, desc = player1.use_technique()
+        if "Все техники использованы" not in desc:
+            technique_used_p1 = True
+
+    if b == 12:
+        dmg_mod, desc = player2.use_technique()
+        if "Все техники использованы" not in desc:
+            technique_used_p2 = True
+
+    # РАСЧЁТ УРОНА
+    weapon_p1 = player1.active_weapon
+    weapon_p2 = player2.active_weapon
+
+    dmg1, dmg2, desc, lose_kunai_p1, lose_kunai_p2, lose_shuriken_p1, lose_shuriken_p2 = get_damage(
+        a, b, weapon_p1, weapon_p2
+    )
+
+    # АВТОМАТИЧЕСКОЕ ИСПОЛЬЗОВАНИЕ ТЕХНИКИ при низком HP
+    for player in [player1, player2]:
+        if (player.hp <= 5 and
+                player.hp > 0 and
+                player.used_techniques_count < 2 and
+                not player.has_used_technique_at_low_hp and
+                player.learned_techniques):
+
+            print(f"\n⚠️ {player.name} в отчаянной попытке использует технику для выживания!")
+            dmg_mod, tech_desc = player.use_technique()
+            player.has_used_technique_at_low_hp = True
+            print(tech_desc)
+
+    # Применение урона с учётом активных техник
+    p1_damage_to_apply = 0 if player1.is_technique_active() else dmg1
+    p2_damage_to_apply = 0 if player2.is_technique_active() else dmg2
+
+    player1.hp += p1_damage_to_apply
+    player2.hp += p2_damage_to_apply
+
+    # Вывод описания удара
+    if desc:
+        print(f"Описание: {desc}")
+    else:
+        print("Описание: Обычный обмен ударами (нет специального эффекта)")
+
+    p1_lost = False
+    p2_lost = False
+
+    # ОБРАБОТКА ПОТЕРИ ОРУЖИЯ (из таблицы урона)
+    # P1: проверяем только флаги P1
+    if lose_kunai_p1 and weapon_p1 == "кунай":
+        player1.active_weapon = None
+        player1.can_use_weapon["кунай"] = False
+        player1.inventory["кунай"] -= 1
+        p1_lost = True
+        print(f"{player1.name} потерял кунай!")
+
+    if lose_shuriken_p1 and weapon_p1 == "сюрикен":
+        player1.active_weapon = None
+        player1.can_use_weapon["сюрикен"] = False
+        player1.inventory["сюрикен"] -= 1
+        p1_lost = True
+        print(f"{player1.name} потерял сюрикен!")
+
+    # P2: проверяем только флаги P2
+    if lose_kunai_p2 and weapon_p2 == "кунай":
+        player2.active_weapon = None
+        player2.can_use_weapon["кунай"] = False
+        player2.inventory["кунай"] -= 1
+        p2_lost = True
+        print(f"{player2.name} потерял кунай!")
+
+    if lose_shuriken_p2 and weapon_p2 == "сюрикен":
+        player2.active_weapon = None
+        player2.can_use_weapon["сюрикен"] = False
+        player2.inventory["сюрикен"] -= 1
+        p2_lost = True
+        print(f"{player2.name} потерял сюрикен!")
+
+    # АКТИВАЦИЯ ОРУЖИЯ: подготовленное оружие становится активным В СЛЕДУЮЩЕМ РАУНДЕ
+    if not p1_lost:
+        if player1.prepared_kunai and player1.inventory.get("кунай", 0) > 0:
+            player1.active_weapon = "кунай"
+        elif player1.prepared_shuriken and player1.inventory.get("сюрикен", 0) > 0:
+            player1.active_weapon = "сюрикен"
+
+
+    if not p2_lost:
+        if player2.prepared_kunai and player2.inventory.get("кунай", 0) > 0:
+            player2.active_weapon = "кунай"
+        elif player2.prepared_shuriken and player2.inventory.get("сюрикен", 0) > 0:
+            player2.active_weapon = "сюрикен"
+
+    # Сброс флагов подготовки (оружие теперь активно; для новой подготовки нужно снова выбрать 11/12)
+    player1.prepared_kunai = False
+    player1.prepared_shuriken = False
+    player2.prepared_kunai = False
+    player2.prepared_shuriken = False
+
+    print(f"{player1.name}: {player1.get_weapon_status()}")
+    print(f"{player2.name}: {player2.get_weapon_status()}")
+
+    # Проверка HP и вывод результата раунда
+    if player1.hp <= 0 and player2.hp <= 0:
+        print(f"\nОба игрока погибли одновременно! Ничья!")
+        return True
+    elif player1.hp <= 0:
+        print(f"\n{player2.name} победил! {player1.name} повержен.")
+        post_battle_reward(player2, player1)
+        return True
+    elif player2.hp <= 0:
+        print(f"\n{player1.name} победил! {player2.name} повержен.")
+        post_battle_reward(player1, player2)
+        return True
+
+    # Сообщение о защите техникой, если применимо
+    if player1.is_technique_active():
+        print(f"{player1.name} избегает урона благодаря активной технике!")
+    if player2.is_technique_active():
+        print(f"{player2.name} избегает урона благодаря активной технике!")
+
+def start_second_match():
+    player1, player2 = setup_second_match_fighters()
+    print(f"Победитель первой схватки: {player1.name}")
+    print(f"Противник: {player2.name}")
+
+    # Показываем начальное состояние
+    print(f"\nНачальное состояние:")
+    print(f"{player1.name}: HP={player1.hp}, оружие={player1.inventory}, техники={player1.available_techniques}")
+    print(f"{player2.name}: HP={player2.hp}, оружие={player2.inventory}")
+
+
+    # Проводим раунд
+    simulate_second_match_round(player1, player2)
+
 def main():
     player1_name, player2_name = select_fighters()
     player1 = Player(player1_name)
@@ -348,6 +571,15 @@ def main():
     print("Начало боя!")
     while True:
         if simulate_round(player1, player2):
+            break
+
+    for player in [player1, player2]:
+        player.hp = 20  # Полное восстановление здоровья
+        player.active_weapon = None  # Сброс активированного оружия
+        player.prepared_kunai = False
+        player.prepared_shuriken = False
+    while True:
+        if simulate_second_match_round(player1, player2):
             break
 
 if __name__ == "__main__":
