@@ -1,4 +1,5 @@
 import random
+import pygame
 from player import Player
 from damage_table import DAMAGE_TABLE
 from damage_table_weapon import WEARON_P1_ATTACKS, WEARON_P2_ATTACKS, WEARON_EFFECTS_DUAL_KUNAI
@@ -565,10 +566,20 @@ def start_second_match():
     simulate_second_match_round(player1, player2)
 
 def main():
+    pygame.init()
+    screen = pygame.display.set_mode((1000, 600))
+    clock = pygame.time.Clock()
+
+
+
     player1_name, player2_name = select_fighters()
     player1 = Player(player1_name)
     player2 = Player(player2_name)
     print("Начало боя!")
+
+    fighter1 = Player("Игрок 1", 200, 300)
+    fighter2 = Player("Игрок 2", 700, 300)
+
     while True:
         if simulate_round(player1, player2):
             break
@@ -581,6 +592,48 @@ def main():
     while True:
         if simulate_second_match_round(player1, player2):
             break
+
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            # Управление
+            keys = pygame.key.get_pressed()
+            # Игрок 1: A/D для движения, Q для атаки
+            if keys[pygame.K_a]:
+                fighter1.x -= 5
+            if keys[pygame.K_d]:
+                fighter1.x += 5
+            if keys[pygame.K_q] and not fighter1.is_attacking:
+                fighter1.attack()
+                # Проверка попадания по игроку 2
+                if abs(fighter1.x - fighter2.x) < 80:  # Дистанция атаки
+                    fighter2.take_damage(10)
+
+            # Игрок 2: Стрелки для движения, O для атаки
+            if keys[pygame.K_LEFT]:
+                fighter2.x -= 5
+            if keys[pygame.K_RIGHT]:
+                fighter2.x += 5
+            if keys[pygame.K_o] and not fighter2.is_attacking:
+                fighter2.attack()
+                if abs(fighter2.x - fighter1.x) < 80:
+                    fighter1.take_damage(10)
+
+        # Обновление состояния бойцов
+            fighter1.update()
+            fighter2.update()
+
+        # Отрисовка
+            screen.fill((50, 50, 100))  # Синий фон
+            fighter1.draw(screen)
+            fighter2.draw(screen)
+
+        pygame.display.flip()
+        clock.tick(60)  # 60 FPS
+
+    pygame.quit()
 
 if __name__ == "__main__":
     main()

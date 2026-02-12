@@ -1,7 +1,8 @@
 import random
+import pygame
 
 class Player:
-    def __init__(self, name, is_winner=False):
+    def __init__(self, name, x=0, y=300, is_winner=False):
         self.name = name
         self.hp = 20
         self.inventory = {"кунай": 1, "сюрикен": 1}
@@ -18,6 +19,45 @@ class Player:
         self.used_techniques_count = 0  # счётчик использованных техник (максимум 2)
         self.has_used_technique_at_low_hp = False  # флаг: использована ли техника при низком HP
         self.technique_active_this_round = False  # техника активна в текущем раунде
+        #Позиция
+        self.x = x
+        self.y = y
+        # Атрибуты для файтинга
+        self.is_attacking = False
+        self.attack_cooldown = 0
+
+        # Графика (заглушки — замените на реальные изображения)
+        self.idle_img = pygame.Surface((50, 80))
+        self.idle_img.fill((0, 255, 0))  # Зелёный
+        self.attack_img = pygame.Surface((60, 80))
+        self.attack_img.fill((255, 0, 0))  # Красный
+        self.current_img = self.idle_img
+
+    def attack(self):
+        if self.attack_cooldown <= 0:
+            self.is_attacking = True
+            self.attack_cooldown = 30  # 0.5 сек при 60 FPS
+            self.current_img = self.attack_img
+
+    def update(self):
+        # Сброс атаки после кулдауна
+        if self.is_attacking:
+            self.attack_cooldown -= 1
+            if self.attack_cooldown <= 0:
+                self.is_attacking = False
+                self.current_img = self.idle_img
+
+    def take_damage(self, damage):
+        self.hp -= damage
+        if self.hp < 0:
+            self.hp = 0
+
+    def draw(self, screen):
+        screen.blit(self.current_img, (self.x, self.y))
+        # Отображение здоровья
+        font = pygame.font.SysFont(None, 24)
+        hp_text = font.render(f"{self.name}: {self.hp}", True, (255, 255, 255))
+        screen.blit(hp_text, (self.x, self.y - 30))
 
     def get_weapon_status(self):
         return self.active_weapon if self.active_weapon else "нет оружия"
